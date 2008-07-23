@@ -1,0 +1,19 @@
+
+A. Qt
+1. Download: http://trolltech.com
+2. ./configure
+
+
+B. SIP
+1. Download: http://www.riverbankcomputing.co.uk/software/sip/download
+2. python configure.py
+3. sudo make install
+
+C. PyQt
+1. Download: http://www.riverbankcomputing.co.uk/software/pyqt/download
+2. python configure.py
+3. make
+4. sudo make install
+
+
+Help: http://trolltech.com/developer/faqs/Qt/installation
