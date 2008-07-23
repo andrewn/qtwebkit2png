@@ -91,4 +91,9 @@ examples:
     if options.height>options.initHeight:
        options.initHeight = options.height
        
+    print "Options ::: "
+    print options
+    print "Args :::"
+    print args
+       
 if __name__ == '__main__' : main()
