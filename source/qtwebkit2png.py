@@ -24,8 +24,166 @@ __version__ = "0.4"
 
 import sys
 
+try:
+  from PyQt4 import QtGui, QtCore, QtWebKit
+except ImportError:
+  print "Couldn't import PyQt4 -- do you have Qt4 and PyQt installed?"
+  sys.exit()
+
 from optparse import OptionParser
 
+# Provides helper method for 
+class WebSnapshotProcessor:
+  def __init__(self, urls, options):
+    self.urls   = urls
+    self.options = options
+    
+    print "Start web view wrapper"
+    self.view = WebSnapshotView()
+
+    #print "Processing urls"
+    self.processAllURLs()
+    #self.processSingleURL(self.urls[0])
+    
+    self.view.suspendQuit()
+  
+  def whenLoaded(self, url, bitmapData):
+    print "Loaded"
+    filename = self.makeFilename(url, self.options)
+    self.saveImages(bitmapData, filename, self.options)
+    
+    print " ... done"
+    self.processAllURLs()
+  
+  def processSingleURL(self, url):
+    self.view.getURL(url, self.whenLoaded)
+  
+  def processAllURLs(self):
+     if self.urls:
+         if self.urls[0] == '-':
+             url = sys.stdin.readline().rstrip()
+             if not url: self.view.quit() #AppKit.NSApplication.sharedApplication().terminate_(None)
+         else: 
+             url = self.urls.pop(0)
+             print "Popped URL from array ", url 
+     else:
+         #self.view.quit()
+         self.quit() 
+         #AppKit.NSApplication.sharedApplication().terminate_(None)
+
+     print "Fetching", url, "..."
+     #self.view.resetWebView()
+     self.view.getURL(url, self.whenLoaded)
+     #TODO: self.resetWebview(webview)
+     
+     # TODO: ??
+     #if not webview.mainFrame().provisionalDataSource():
+     if not self.view.isSourceLoaded():
+         print " ... not a proper url?"
+         self.processAllURLs()
+     
+  def makeFilename(self,URL,options):
+     # make the filename
+     if options.filename:
+       filename = options.filename
+     elif options.md5:
+       try:
+              import md5
+       except ImportError:
+              print "--md5 requires python md5 library"
+              self.quit()
+              #AppKit.NSApplication.sharedApplication().terminate_(None)
+       filename = md5.new(URL).hexdigest()
+     else:
+       import re
+       filename = re.sub('\W','',URL);
+       filename = re.sub('^http','',filename);
+     if options.datestamp:
+       import time
+       now = time.strftime("%Y%m%d")
+       filename = now + "-" + filename
+     import os
+     dir = os.path.abspath(os.path.expanduser(options.dir))
+     return os.path.join(dir,filename)
+  
+  def saveImages(self,bitmapData,filename,options):
+    # Save fullsize PNG
+    if options.fullsize:
+      bitmapData.save(filename + "-full.png", None, 100)
+
+    if options.thumb or options.clipped:
+      # work out how big the thumbnail is
+      #width = bitmapData.pixelsWide()
+      #height = bitmapData.pixelsHigh()
+      #thumbWidth = (width * options.scale)
+      #thumbHeight = (height * options.scale)
+
+      #
+      # Do clipping/scaling here
+      #
+      thumbOutput = bitmapData
+      clipOutput = bitmapData
+      
+      if options.thumb:
+        # Save thumbnail
+        thumbOutput.save(filename + "-thumb.png", None, 100)
+      if options.clipped:
+        clipOutput.save(filename + "-clipped.png", None, 100)
+     
+  def quit(self):
+   sys.exit()
+
+# Wrapper for the QtWebkit view of 
+# a web page. Provides methods for 
+# capturing and loading.
+class WebSnapshotView(QtGui.QWidget):
+ def __init__(self, parent = None):
+   print "Initialise web view"
+   self.app     = QtGui.QApplication(sys.argv)
+   self.widget  = QtGui.QWidget.__init__(self)
+   self.web     = QtWebKit.QWebView()
+   #self.web.show()
+   
+   # Capture signal indicating page loaded
+   self.connect(self.web, QtCore.SIGNAL("loadFinished(bool)"), self.loadFinished)
+ 
+ def suspendQuit(self):
+   # Stop programming quitting
+    # until QtApp quits
+    #sys.exit(self.app.exec_())
+    return
+
+ def getURL(self, url, callback):
+   self.loadedCallback = callback
+   print "Getting url: " + url
+   self.currentURL = url
+   qtURL = QtCore.QUrl(url)
+   self.web.setUrl( qtURL )
+          
+ def loadFinished(self, success):
+   print "Finished loading: ", self.currentURL, " with bool ", success   
+   self.resizeWebView()
+   #url = self.getAbsoluteURL()
+   bitmapData = QtGui.QPixmap.grabWidget(self.web)
+   self.loadedCallback(self.currentURL, bitmapData)
+ 
+ def resizeWebView(self):
+   size = self.web.page().mainFrame().contentsSize()
+   self.web.setFixedSize(size)
+ 
+ def quit(self):
+   print "Quit message received. Need to tidy up."
+   #sys.exit(self.app.exec_())
+   #sys.exit()
+   #print "Done"
+   
+ def resetWebView(self):
+   print "Reset web view..."
+   
+ def isSourceLoaded(self):
+   print "Check is url loaded"
+   return True
+   
 def main():
 
     # parse the command line
@@ -95,5 +253,10 @@ examples:
     print options
     print "Args :::"
     print args
+    
+    print "Try making a filename:"
+    processor = WebSnapshotProcessor(args, options)
+    #processor.processAllURLs()
+    sys.exit(processor.view.app.exec_())
        
 if __name__ == '__main__' : main()
