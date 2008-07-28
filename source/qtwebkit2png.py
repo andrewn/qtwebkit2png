@@ -55,8 +55,12 @@ class WebSnapshotProcessor:
     print " ... done"
     self.processAllURLs()
   
+  def whenErrorLoaded(self, url):
+    print "...something went wrong"
+    self.processAllURLs()
+  
   def processSingleURL(self, url):
-    self.view.getURL(url, self.whenLoaded)
+    self.view.getURL(url, self.whenLoaded, self.whenErrorLoaded)
   
   def processAllURLs(self):
      if self.urls:
@@ -73,7 +77,7 @@ class WebSnapshotProcessor:
 
      print "Fetching", url, "..."
      #self.view.resetWebView()
-     self.view.getURL(url, self.whenLoaded)
+     self.view.getURL(url, self.whenLoaded, self.whenErrorLoaded)
      #TODO: self.resetWebview(webview)
      
      # TODO: ??
@@ -117,11 +121,8 @@ class WebSnapshotProcessor:
       height = bitmapData.height()
       thumbWidth = (width * options.scale)
       thumbHeight = (height * options.scale)
-      print "Thumbnail is width: ", width, ", height: ", height, " (thumbWidth ", thumbWidth, ", thumbHeight", thumbHeight, ")"
 
-      #
       # Do clipping/scaling here
-      #
       thumbScratch = bitmapData.copy()
       thumbOutput = thumbScratch.scaledToWidth(thumbWidth, QtCore.Qt.SmoothTransformation)
       
@@ -141,7 +142,6 @@ class WebSnapshotProcessor:
 # capturing and loading.
 class WebSnapshotView(QtGui.QWidget):
  def __init__(self, parent = None):
-   print "Initialise web view"
    self.app     = QtGui.QApplication(sys.argv)
    self.widget  = QtGui.QWidget.__init__(self)
    self.web     = QtWebKit.QWebView()
@@ -156,15 +156,18 @@ class WebSnapshotView(QtGui.QWidget):
     #sys.exit(self.app.exec_())
     return
 
- def getURL(self, url, callback):
+ def getURL(self, url, callback, errorCallback):
    self.loadedCallback = callback
-   print "Getting url: " + url
+   self.errorCallback = errorCallback
    self.currentURL = url
    qtURL = QtCore.QUrl(url)
    self.web.setUrl( qtURL )
           
  def loadFinished(self, success):
-   print "Finished loading: ", self.currentURL, " with bool ", success   
+   
+   if(not success):
+     self.errorCallback(self.currentURL)
+   
    self.resizeWebView()
    #url = self.getAbsoluteURL()
    bitmapData = QtGui.QPixmap.grabWidget(self.web)
@@ -175,7 +178,7 @@ class WebSnapshotView(QtGui.QWidget):
    self.web.setFixedSize(size)
  
  def quit(self):
-   print "Quit message received. Need to tidy up."
+   pass
    #sys.exit(self.app.exec_())
    #sys.exit()
    #print "Done"
