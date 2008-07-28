@@ -23,6 +23,7 @@ __version__ = "0.4"
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 import sys
+import time
 
 try:
   from PyQt4 import QtGui, QtCore, QtWebKit
@@ -38,8 +39,7 @@ class WebSnapshotProcessor:
     self.urls   = urls
     self.options = options
     
-    print "Start web view wrapper"
-    self.view = WebSnapshotView()
+    self.view = WebSnapshotView(self.options.initWidth,self.options.initHeight)
 
     #print "Processing urls"
     self.processAllURLs()
@@ -48,11 +48,8 @@ class WebSnapshotProcessor:
     self.view.suspendQuit()
   
   def whenLoaded(self, url, bitmapData):
-    print "Loaded"
     filename = self.makeFilename(url, self.options)
     self.saveImages(bitmapData, filename, self.options)
-    print "Bitmap data class ", bitmapData
-    print " ... done"
     self.processAllURLs()
   
   def whenErrorLoaded(self, url):
@@ -76,9 +73,8 @@ class WebSnapshotProcessor:
          #AppKit.NSApplication.sharedApplication().terminate_(None)
 
      print "Fetching", url, "..."
-     #self.view.resetWebView()
+     self.view.resetWebView()
      self.view.getURL(url, self.whenLoaded, self.whenErrorLoaded)
-     #TODO: self.resetWebview(webview)
      
      # TODO: ??
      #if not webview.mainFrame().provisionalDataSource():
@@ -129,7 +125,6 @@ class WebSnapshotProcessor:
       clipOutput = thumbOutput.copy(0, 0, options.clipwidth, options.clipheight)
       
       if options.thumb:
-        # Save thumbnail
         thumbOutput.save(filename + "-thumb.png", None, 100)
       if options.clipped:
         clipOutput.save(filename + "-clipped.png", None, 100)
@@ -141,11 +136,17 @@ class WebSnapshotProcessor:
 # a web page. Provides methods for 
 # capturing and loading.
 class WebSnapshotView(QtGui.QWidget):
- def __init__(self, parent = None):
+ def __init__(self, defaultWidth, defaultHeight):
+   
+   self.defaultWidth = defaultWidth
+   self.defaultHeight = defaultHeight
+   
    self.app     = QtGui.QApplication(sys.argv)
    self.widget  = QtGui.QWidget.__init__(self)
    self.web     = QtWebKit.QWebView()
-   #self.web.show()
+   
+   self.web.move(-10000, -10000)
+   self.web.show()
    
    # Capture signal indicating page loaded
    self.connect(self.web, QtCore.SIGNAL("loadFinished(bool)"), self.loadFinished)
@@ -154,7 +155,7 @@ class WebSnapshotView(QtGui.QWidget):
    # Stop programming quitting
     # until QtApp quits
     #sys.exit(self.app.exec_())
-    return
+    pass
 
  def getURL(self, url, callback, errorCallback):
    self.loadedCallback = callback
@@ -184,7 +185,9 @@ class WebSnapshotView(QtGui.QWidget):
    #print "Done"
    
  def resetWebView(self):
-   print "Reset web view..."
+   print "Reset web view to ", self.defaultWidth, " ", self.defaultHeight
+   self.web.setFixedSize(self.defaultWidth, self.defaultHeight)
+   # TODO: Force to apply
    
  def isSourceLoaded(self):
    print "Check is url loaded"
