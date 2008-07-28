@@ -51,7 +51,7 @@ class WebSnapshotProcessor:
     print "Loaded"
     filename = self.makeFilename(url, self.options)
     self.saveImages(bitmapData, filename, self.options)
-    
+    print "Bitmap data class ", bitmapData
     print " ... done"
     self.processAllURLs()
   
@@ -113,16 +113,19 @@ class WebSnapshotProcessor:
 
     if options.thumb or options.clipped:
       # work out how big the thumbnail is
-      #width = bitmapData.pixelsWide()
-      #height = bitmapData.pixelsHigh()
-      #thumbWidth = (width * options.scale)
-      #thumbHeight = (height * options.scale)
+      width = bitmapData.width()
+      height = bitmapData.height()
+      thumbWidth = (width * options.scale)
+      thumbHeight = (height * options.scale)
+      print "Thumbnail is width: ", width, ", height: ", height, " (thumbWidth ", thumbWidth, ", thumbHeight", thumbHeight, ")"
 
       #
       # Do clipping/scaling here
       #
-      thumbOutput = bitmapData
-      clipOutput = bitmapData
+      thumbScratch = bitmapData.copy()
+      thumbOutput = thumbScratch.scaledToWidth(thumbWidth, QtCore.Qt.SmoothTransformation)
+      
+      clipOutput = thumbOutput.copy(0, 0, options.clipwidth, options.clipheight)
       
       if options.thumb:
         # Save thumbnail
